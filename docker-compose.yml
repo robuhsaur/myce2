@@ -1,0 +1,44 @@
+version: "3.8"
+services:
+  database:
+    image: postgres:15
+    volumes:
+      - ./database/data:/var/lib/postgresql/data
+      - ./database/setup:/docker-entrypoint-initdb.d
+    environment:
+      - POSTGRES_MULTIPLE_DATABASES=mice
+      - POSTGRES_PASSWORD=Hikaru24!
+    ports:
+      - 15432:5432
+  myce_backend:
+    build:
+      context: ./myce_backend
+      dockerfile: Dockerfile.dev
+    environment:
+      DATABASE_URL: "postgres://myce_backend:password@database:5432/myce_backend"
+      WAIT_HOSTS: database:5432
+      WAIT_TIMEOUT: 180
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./myce_backend:/app
+    depends_on:
+      - database
+  ghi:
+    image: node:latest
+    command: npm run dev
+    build:
+      context: ./ghi
+    container_name: next-mice-ui
+    working_dir: /app
+    environment:
+      - HOST=0.0.0.0
+      - PORT=3000
+      - NODE_ENV=development
+      - MYCE_API_HOST=http://localhost:8000
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./ghi:/app
+    depends_on:
+      - database
